@@ -1,9 +1,7 @@
 export default function Home() {
-	const test = 'oi';
-
 	return (
 		<div>
-			oi
+			Hello World 2
 		</div>
 	)
 }
