@@ -3,27 +3,28 @@ import database from "infra/database.js";
 async function status(req, res) {
 	const updateAt = new Date().toISOString();
 
-	const postgresVersionQuery = await database.query("SELECT version()");
-	const postgresVersion = postgresVersionQuery?.rows[0]?.version;
+	const databaseVersionQuery = await database.query("SHOW server_version;");
+	const databaseVersion = databaseVersionQuery?.rows[0]?.server_version;
 
-	const postgresMaxConnectionQuery = await database.query(
-		"SELECT * FROM pg_settings WHERE name = 'max_connections'",
-	);
-	const postgresMaxConnections = postgresMaxConnectionQuery?.rows[0]?.setting;
+	const dabaseMaxConnectionQuery = await database.query("SHOW max_connections");
+	const databaseMaxConnections =
+		dabaseMaxConnectionQuery?.rows[0]?.max_connections;
 
-	const postgresConnectionsInUseQuery = await database.query(
-		"SELECT count(*) as total_connections FROM pg_stat_activity",
-	);
-	const postgresConnectionsUsed =
-		postgresConnectionsInUseQuery?.rows[0]?.total_connections;
-	console.log("postgresConnectionsInUseQuery", postgresConnectionsInUseQuery);
+	const databaseName = process.env.POSTGRES_DB;
+	const databaseConnectionsInUseQuery = await database.query({
+		text: "SELECT count(*)::int FROM pg_stat_activity WHERE datname = $1;",
+		values: [databaseName],
+	});
+	const databaseConnectionsUsed = databaseConnectionsInUseQuery?.rows[0]?.count;
 
 	res.status(200).json({
 		updated_at: updateAt,
-		database: {
-			version: postgresVersion,
-			max_connections: Number(postgresMaxConnections),
-			connections_used: Number(postgresConnectionsUsed),
+		dependencies: {
+			database: {
+				version: databaseVersion,
+				max_connections: Number(databaseMaxConnections),
+				opened_connections: Number(databaseConnectionsUsed),
+			},
 		},
 	});
 }
